@@ -610,6 +610,19 @@ async function startServer() {
     }
   });
 
+  app.post('/api/bots/:id/run-join-command', requireAuth, (req, res) => {
+    const user = (req as any).user;
+    const bot = botManager.getUserBot(user.id, req.params.id);
+    if (!bot) {
+      return res.status(404).json({ error: 'Bot not found' });
+    }
+    const ok = bot.runJoinCommand();
+    if (!ok) {
+      return res.status(400).json({ error: 'Bot must be connected to execute join command' });
+    }
+    res.json({ success: true, message: 'On-join command dispatched' });
+  });
+
   app.post('/api/bots/:id/control', requireAuth, (req, res) => {
     const user = (req as any).user;
     const bot = botManager.getUserBot(user.id, req.params.id);

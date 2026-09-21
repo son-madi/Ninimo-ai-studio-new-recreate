@@ -20,6 +20,7 @@ interface ConnectionSettingsCardProps {
 
 export const ConnectionSettingsCard: React.FC<ConnectionSettingsCardProps> = ({
   config,
+  isOnline,
   onSaveConfig,
 }) => {
   const { theme, isDark, isColourUI } = useTheme();
@@ -323,7 +324,7 @@ export const ConnectionSettingsCard: React.FC<ConnectionSettingsCardProps> = ({
                 ? 'text-cyan-200 bg-cyan-950/60 border-cyan-500/60 shadow-xs'
                 : isDark ? 'text-zinc-300 bg-zinc-900 border-zinc-700' : 'text-zinc-700 bg-white border-zinc-300'
             }`}>
-              Delay: {formData.onJoinDelayMs}ms
+              Delay: {formData.onJoinDelayMs || 2000}ms
             </span>
           </div>
 
@@ -333,7 +334,7 @@ export const ConnectionSettingsCard: React.FC<ConnectionSettingsCardProps> = ({
 
           <input
             type="text"
-            value={formData.onJoinCommand}
+            value={formData.onJoinCommand || ''}
             onChange={(e) => setFormData({ ...formData, onJoinCommand: e.target.value })}
             placeholder="e.g. /login 123456 or /register pass pass or /server survival"
             className={`w-full border rounded-lg px-3 py-2 font-mono focus:outline-none text-xs ${

@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import {
   Zap,
   Clock,
   MoveHorizontal,
   CheckCircle2,
-  PlayCircle,
   ShieldCheck,
 } from 'lucide-react';
 import { AntiAfkConfig } from '../types';
@@ -16,19 +15,15 @@ interface AntiAfkCardProps {
   isOnline: boolean;
   botId: string;
   onUpdateConfig: (updated: AntiAfkConfig) => void;
-  onTriggerTestMove: () => Promise<void>;
+  onTriggerTestMove?: () => Promise<void>;
 }
 
 export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
   config,
   isOnline,
   onUpdateConfig,
-  onTriggerTestMove,
 }) => {
   const { theme, isDark, isColourUI } = useTheme();
-
-  const [testing, setTesting] = useState(false);
-  const [testFeedback, setTestFeedback] = useState<string | null>(null);
 
   const handleToggle = () => {
     onUpdateConfig({ ...config, enabled: !config.enabled });
@@ -40,20 +35,6 @@ export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
 
   const handleMovementTypeChange = (type: AntiAfkConfig['movementType']) => {
     onUpdateConfig({ ...config, movementType: type });
-  };
-
-  const handleTestClick = async () => {
-    setTesting(true);
-    setTestFeedback(config.movementType === 'safe_in_place' ? 'Testing safe in-place routine (arm swing, crouch, slot)...' : 'Executing Anti-AFK test routine...');
-    try {
-      await onTriggerTestMove();
-      setTestFeedback('Routine executed successfully! Coordinates unchanged.');
-      setTimeout(() => setTestFeedback(null), 4000);
-    } catch {
-      setTestFeedback('Test failed');
-    } finally {
-      setTesting(false);
-    }
   };
 
   return (
@@ -363,45 +344,6 @@ export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
             />
             <span className={`text-xs font-semibold ${isColourUI ? 'text-amber-200' : isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>Sneak Crouch</span>
           </label>
-        </div>
-
-        {/* Test Button & Feedback */}
-        <div className={`pt-2 border-t ${
-          isColourUI ? 'border-slate-800' : isDark ? 'border-zinc-800' : 'border-zinc-200'
-        }`}>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="button"
-            onClick={handleTestClick}
-            disabled={testing || !isOnline}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              isOnline
-                ? isColourUI
-                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 border border-amber-300 shadow-[0_0_16px_rgba(245,158,11,0.35)]'
-                  : isDark
-                  ? 'bg-zinc-100 hover:bg-white text-zinc-950 border-white shadow-sm'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-900 shadow-zinc-900/20'
-                : isDark 
-                  ? 'bg-zinc-800/30 text-zinc-600 border border-zinc-800/50 cursor-not-allowed'
-                  : 'bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed'
-            }`}
-          >
-            <PlayCircle className={`w-4 h-4 ${isColourUI ? 'text-zinc-950' : ''}`} />
-            <span>{testing ? 'Performing Routine...' : 'Test Movement Routine Now'}</span>
-          </motion.button>
-
-          {testFeedback && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-center text-xs font-bold mt-2 ${
-                isColourUI ? 'text-amber-300' : isDark ? 'text-zinc-200' : 'text-zinc-900'
-              }`}
-            >
-              {testFeedback}
-            </motion.p>
-          )}
         </div>
       </div>
     </div>

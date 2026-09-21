@@ -18,9 +18,11 @@ interface ChatConsoleProps {
   isOnline: boolean;
   botStatus?: string;
   quickCommands?: QuickCommandItem[];
-  onSendMessage: (message: string) => Promise<boolean>;
+  onSendMessage?: (message: string) => Promise<boolean> | void;
+  onSendChat?: (message: string) => Promise<boolean> | void;
   onClearChat?: () => void;
   onOpenQuickMessagesSettings?: () => void;
+  embedded?: boolean;
 }
 
 export const ChatConsole: React.FC<ChatConsoleProps> = ({
@@ -30,8 +32,10 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   botStatus,
   quickCommands,
   onSendMessage,
+  onSendChat,
   onClearChat,
   onOpenQuickMessagesSettings,
+  embedded = false,
 }) => {
   const { theme, isDark, isColourUI } = useTheme();
 
@@ -42,6 +46,16 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const canSend = isOnline || botStatus === 'starting';
+
+  const dispatchSendMessage = async (msg: string) => {
+    if (onSendMessage) {
+      return await onSendMessage(msg);
+    }
+    if (onSendChat) {
+      return await onSendChat(msg);
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -65,14 +79,14 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
     setInputText('');
 
     try {
-      await onSendMessage(msg);
+      await dispatchSendMessage(msg);
     } finally {
       setIsSending(false);
     }
   };
 
   const sendQuickCommand = (cmd: string) => {
-    onSendMessage(cmd);
+    dispatchSendMessage(cmd);
   };
 
   const filteredHistory = chatHistory.filter((msg) => {
@@ -253,7 +267,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className={`flex-1 p-4 overflow-y-auto space-y-1.5 font-mono text-xs select-text ${
+        className={`flex-1 p-4 overflow-y-auto overflow-x-auto space-y-1.5 font-mono text-xs select-text ${
           isColourUI
             ? 'bg-[#050814]/80 text-slate-200'
             : isDark ? 'bg-zinc-950/70 text-zinc-200' : 'bg-zinc-50/70 text-zinc-800'
@@ -273,12 +287,41 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
             });
 
             let displaySender = msg.sender;
-            let displayText = msg.text;
-            if (!displaySender && (msg.type === 'chat' || msg.type === 'whisper')) {
-              const match = displayText.match(/^[<\[]([A-Za-z0-9_]{3,16})[>\]]\s*(.*)$/);
-              if (match) {
-                displaySender = match[1];
-                displayText = match[2];
+            let displayText = msg.text || '';
+
+            // Cleanly strip any duplicated/nested sender prefixes (e.g. "<Narendra_modi> Hey", "<Narendra_modi> <Narendra_modi> hey", "[Narendra_modi] hey", "Narendra_modi: hey")
+            if (!msg.isAuto) {
+              let prevText = '';
+              while (displayText !== prevText && displayText.length > 0) {
+                prevText = displayText;
+                const bracketMatch = displayText.match(/^[<\[\(]([A-Za-z0-9_.~*]{1,24})[>\]\)]\s*:?\s*(.*)$/);
+                if (bracketMatch) {
+                  if (!displaySender) {
+                    displaySender = bracketMatch[1];
+                  }
+                  displayText = bracketMatch[2];
+                  continue;
+                }
+                const colonMatch = displayText.match(/^([A-Za-z0-9_.~*]{1,24})\s*[:>]\s+(.*)$/);
+                if (colonMatch && colonMatch[1].toLowerCase() !== 'auto') {
+                  if (!displaySender) {
+                    displaySender = colonMatch[1];
+                  }
+                  displayText = colonMatch[2];
+                  continue;
+                }
+              }
+
+              // Also thoroughly strip any repeated sender or bot name occurrences at the start of displayText
+              const namesToCheck = [displaySender, botUsername].filter(Boolean) as string[];
+              for (const name of namesToCheck) {
+                const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const nameRegex = new RegExp(`^([<\\[\\(]?${escaped}[>\\]\\)]?\\s*[:>\\-]?\\s*)+`, 'i');
+                displayText = displayText.replace(nameRegex, '').trim();
+              }
+
+              if (!displayText.trim() && prevText) {
+                displayText = prevText;
               }
             }
 
@@ -297,7 +340,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.15 }}
-                className={`py-1 px-2.5 rounded-lg flex items-start gap-2 transition-colors ${
+                className={`py-1 px-2.5 rounded-lg flex items-center gap-2 transition-colors min-w-full w-max whitespace-nowrap shrink-0 ${
                   isBotSelf
                     ? isColourUI
                       ? 'bg-indigo-950/40 border-l-2 border-indigo-400'
@@ -316,7 +359,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                 }`}
               >
                 {/* Timestamp */}
-                <span className={`text-[10px] shrink-0 select-none mt-0.5 font-mono ${
+                <span className={`text-[10px] shrink-0 select-none font-mono whitespace-nowrap ${
                   isColourUI ? 'text-slate-500' : 'text-zinc-500'
                 }`}>
                   [{timeStr}]
@@ -324,7 +367,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
 
                 {/* Sender badge strictly for bot chat or player chat */}
                 {isBotSelf ? (
-                  <span className={`font-bold shrink-0 flex items-center gap-1.5 font-mono ${
+                  <span className={`font-bold shrink-0 flex items-center gap-1.5 font-mono whitespace-nowrap ${
                     isColourUI ? 'text-indigo-300' : isDark ? 'text-zinc-200' : 'text-zinc-900'
                   }`}>
                     <span>&lt;{botUsername}&gt;</span>
@@ -338,16 +381,16 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                     )}
                   </span>
                 ) : isOtherPlayer ? (
-                  <span className={`font-bold shrink-0 font-mono ${
+                  <span className={`font-bold shrink-0 font-mono whitespace-nowrap ${
                     isColourUI ? 'text-cyan-300' : isDark ? 'text-white' : 'text-zinc-900'
                   }`}>
                     &lt;{displaySender || 'Player'}&gt;
                   </span>
                 ) : null}
 
-                {/* Content */}
+                {/* Content - full single-line without wrapping, scrollable side-to-side */}
                 <div
-                  className={`flex-1 break-words leading-relaxed font-mono ${
+                  className={`shrink-0 whitespace-nowrap leading-relaxed font-mono ${
                     isBotSelf
                       ? isColourUI ? 'text-indigo-100' : isDark ? 'text-zinc-100' : 'text-zinc-900'
                       : isOtherPlayer
@@ -355,13 +398,13 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                       : isColourUI ? 'text-slate-300' : isDark ? 'text-zinc-400' : 'text-zinc-600'
                   }`}
                 >
-                  {msg.formattedHtml && !isOtherPlayer && !isBotSelf ? (
-                    <div
+                  {msg.formattedHtml && !isOtherPlayer && !isBotSelf && displayText === msg.text ? (
+                    <span
                       dangerouslySetInnerHTML={{ __html: msg.formattedHtml }}
-                      className="inline"
+                      className="whitespace-nowrap inline-block"
                     />
                   ) : (
-                    <span>{displayText}</span>
+                    <span className="whitespace-nowrap inline-block">{displayText}</span>
                   )}
                 </div>
               </motion.div>

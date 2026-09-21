@@ -93,8 +93,12 @@ export class BotInstance extends EventEmitter {
   private syncPollTimer: NodeJS.Timeout | null = null;
   private leaveRejoinTimer: NodeJS.Timeout | null = null;
   private joinCommandTimer: NodeJS.Timeout | null = null;
+  private onJoinCommandExecuted: boolean = false;
+  private onJoinCommandScheduled: boolean = false;
   private mcData: any = null;
   private defaultMove: any = null;
+  private lastPromptAuthTime: number = 0;
+  private recentSentMessages: { text: string; time: number }[] = [];
 
   constructor(config: BotConfig) {
     super();
@@ -139,11 +143,55 @@ export class BotInstance extends EventEmitter {
         newConfig.onJoinCommand.trim() !== '' &&
         newConfig.onJoinCommand !== oldOnJoin
       ) {
-        this.executeOnJoinCommand();
+        this.executeOnJoinCommand(true, true);
       }
       this.reapplyModules();
     }
     this.emitUpdate();
+  }
+
+  public runJoinCommand(): boolean {
+    if (!this.bot || !this.botStateConnected) return false;
+    this.executeOnJoinCommand(true, true);
+    return true;
+  }
+
+  public sendRawChatMessage(cmd: string): boolean {
+    if (!this.bot) return false;
+    try {
+      if (typeof this.bot.chat === 'function') {
+        this.bot.chat(cmd);
+        return true;
+      }
+    } catch (e: any) {
+      if (this.bot._client && typeof this.bot._client.write === 'function') {
+        try {
+          if (cmd.startsWith('/')) {
+            this.bot._client.write('chat_command', {
+              command: cmd.slice(1),
+              timestamp: BigInt(Date.now()),
+              salt: 0n,
+              argumentSignatures: [],
+              signedPreview: false,
+              messageCount: 0,
+              acknowledged: Buffer.alloc(3),
+            });
+          } else {
+            this.bot._client.write('chat_message', {
+              message: cmd,
+              timestamp: BigInt(Date.now()),
+              salt: 0n,
+              signedPreview: false,
+              messageCount: 0,
+              acknowledged: Buffer.alloc(3),
+            });
+          }
+          return true;
+        } catch {}
+      }
+      throw e;
+    }
+    return false;
   }
 
   public start() {
@@ -179,7 +227,12 @@ export class BotInstance extends EventEmitter {
     try {
       this.bot.chat(message);
       this.lastActivity = Date.now();
-      this.addLog('bot_sent', this.config.username, message);
+      const cleanMsg = message.trim();
+      this.recentSentMessages.push({ text: cleanMsg.toLowerCase(), time: Date.now() });
+      if (this.recentSentMessages.length > 25) {
+        this.recentSentMessages.shift();
+      }
+      this.addLog('bot_sent', this.config.username, cleanMsg);
       this.emitUpdate();
       return true;
     } catch (err: any) {
@@ -195,6 +248,10 @@ export class BotInstance extends EventEmitter {
     if (this.bot) {
       this.cleanupBot();
     }
+
+    this.onJoinCommandExecuted = false;
+    this.onJoinCommandScheduled = false;
+    this.lastPromptAuthTime = 0;
 
     this.addLog('info', undefined, `[Bot] Connecting to ${this.config.host}:${this.config.port}...`);
 
@@ -251,9 +308,12 @@ export class BotInstance extends EventEmitter {
       this.isReconnecting = false;
       this.lastActivity = Date.now();
 
-      const version = this.bot?.version || 'auto';
-      this.addLog('info', undefined, `[Bot] [+] Logged in to server! (Protocol: ${version})`);
       this.emitUpdate();
+
+      // Trigger On-Join Command / automation as soon as logged in
+      this.executeOnJoinCommand();
+      // Start Anti-AFK engine immediately so it's active even in auth lobbies
+      this.initializeAntiAfk();
     });
 
     // Guard against spawn firing twice
@@ -267,10 +327,13 @@ export class BotInstance extends EventEmitter {
       this.reconnectCount = 0;
       this.isReconnecting = false;
 
-      this.addLog('info', undefined, `[Bot] [+] Successfully spawned on server! (Version: ${this.bot.version})`);
+      const botIgn = this.bot?.username || this.config.username;
+      this.addLog('info', undefined, `[${botIgn}] Successfully spawned on server!`);
 
       // Execute on-join message / command reliably
       this.executeOnJoinCommand();
+      // Ensure Anti-AFK is active
+      this.initializeAntiAfk();
 
       // Vanilla gravity alignment (fixes physics drift, floating flags & movement kicks on Paper/anti-cheat)
       try {
@@ -291,10 +354,10 @@ export class BotInstance extends EventEmitter {
         this.defaultMove = defaultMove;
         this.bot.pathfinder.setMovements(defaultMove);
 
-        // Initialize bot modules
+        // Initialize bot modules (position, circle walk, etc.)
         this.initializeSlobosModules(mcData, defaultMove);
       } catch (err: any) {
-        this.addLog('error', undefined, `[Bot] Error configuring pathfinder: ${err.message}`);
+        this.addLog('info', undefined, `[Bot] Pathfinder note: ${err.message}`);
       }
 
       this.startSyncLoop();
@@ -332,10 +395,94 @@ export class BotInstance extends EventEmitter {
       const cleanText = stripMinecraftCodes(rawString);
       if (!cleanText.trim()) return;
 
-      const chatMatch = cleanText.match(/^[<\[]([A-Za-z0-9_]{3,16})[>\]]\s*(.*)$/);
-      const sender = chatMatch ? chatMatch[1] : undefined;
+      // Classify message sender and payload with recursive prefix stripping
+      let sender: string | undefined;
+      let contentText = cleanText;
+
+      let matched = true;
+      while (matched && contentText.length > 0) {
+        matched = false;
+        // Bracket match: <User> or [User] or (User)
+        const bracketMatch = contentText.match(/^[<\[\(]([A-Za-z0-9_.~*]{1,24})[>\]\)]\s*:?\s*(.*)$/);
+        if (bracketMatch) {
+          if (!sender) {
+            sender = bracketMatch[1];
+          }
+          contentText = bracketMatch[2];
+          matched = true;
+          continue;
+        }
+        // Colon or arrow match: User: or User>
+        const colonMatch = contentText.match(/^([A-Za-z0-9_.~*]{1,24})\s*[:>]\s+(.*)$/);
+        if (colonMatch && colonMatch[1].toLowerCase() !== 'auto') {
+          if (!sender) {
+            sender = colonMatch[1];
+          }
+          contentText = colonMatch[2];
+          matched = true;
+          continue;
+        }
+      }
+
+      // If sender was found, strip any additional occurrences of <sender> or sender: from the beginning of contentText
+      if (sender) {
+        const escapedSender = sender.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const repeatedSenderRegex = new RegExp(`^([<\\[\\(]?${escapedSender}[>\\]\\)]?\\s*[:>\\-]?\\s*)+`, 'i');
+        contentText = contentText.replace(repeatedSenderRegex, '').trim();
+      }
+
+      // Also if bot's username is at the beginning of contentText, strip it
+      const escapedBotName = this.config.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const botNameRegex = new RegExp(`^([<\\[\\(]?${escapedBotName}[>\\]\\)]?\\s*[:>\\-]?\\s*)+`, 'i');
+      contentText = contentText.replace(botNameRegex, '').trim();
+
+      // Check if this incoming message is a server echo of a message already sent by this bot
+      const now = Date.now();
+      this.recentSentMessages = this.recentSentMessages.filter(m => now - m.time < 12000);
+      const lowerClean = cleanText.toLowerCase();
+      const lowerContent = contentText.trim().toLowerCase();
+      const lowerBotName = this.config.username.toLowerCase();
+
+      const mentionsBot = (sender && sender.toLowerCase() === lowerBotName) || lowerClean.includes(lowerBotName);
+      if (mentionsBot) {
+        const matchIdx = this.recentSentMessages.findIndex(m => {
+          if (!m.text) return false;
+          return m.text === lowerContent ||
+                 lowerContent.includes(m.text) ||
+                 m.text.includes(lowerContent) ||
+                 lowerClean.includes(m.text);
+        });
+        if (matchIdx !== -1) {
+          // Already logged as bot_sent when sent by user - skip duplicate echo!
+          this.recentSentMessages.splice(matchIdx, 1);
+          return;
+        }
+      }
+
       const type = sender ? 'chat' : 'system';
-      this.addLog(type, sender, cleanText, ansiHtml);
+      this.addLog(type, sender, contentText, ansiHtml);
+
+      // Check for server authentication / password prompts to trigger onJoinCommand or autoAuth
+      const lower = cleanText.toLowerCase();
+      if (
+        lower.includes('/login') ||
+        lower.includes('login ') ||
+        lower.includes('/register') ||
+        lower.includes('register ') ||
+        lower.includes('/l ') ||
+        lower.includes('비밀번호') ||
+        lower.includes('로그인') ||
+        lower.includes('authenticate') ||
+        lower.includes('enter password')
+      ) {
+        if (!this.onJoinCommandExecuted && this.config.onJoinCommand && this.config.onJoinCommand.trim()) {
+          const now = Date.now();
+          if (!this.lastPromptAuthTime || now - this.lastPromptAuthTime > 3000) {
+            this.lastPromptAuthTime = now;
+            this.executeOnJoinCommand(true);
+          }
+        }
+      }
     });
 
     this.bot.on('health', () => {
@@ -393,50 +540,229 @@ export class BotInstance extends EventEmitter {
   // ============================================================
   // ON-JOIN COMMAND / MESSAGE DISPATCHER
   // ============================================================
-  private executeOnJoinCommand() {
+  public executeOnJoinCommand(immediate: boolean = false, force: boolean = false) {
+    const commandPayload = (this.config.onJoinCommand || '').trim();
+    if (!commandPayload) return;
+
+    // Prevent duplicate executions per connection session unless explicitly forced
+    if (this.onJoinCommandExecuted && !force) {
+      return;
+    }
+
     if (this.joinCommandTimer) {
       clearTimeout(this.joinCommandTimer);
       this.joinCommandTimer = null;
     }
 
-    const commandPayload = (this.config.onJoinCommand || '').trim();
-    if (!commandPayload) return;
+    // If immediate, dispatch right away and mark as executed
+    if (immediate) {
+      this.onJoinCommandScheduled = false;
+      this.onJoinCommandExecuted = true;
+      this.dispatchOnJoinPayload(commandPayload);
+      return;
+    }
 
+    // If already scheduled and not immediate/forced, avoid scheduling duplicate timers
+    if (this.onJoinCommandScheduled && !force) {
+      return;
+    }
+
+    this.onJoinCommandScheduled = true;
     const delayMs = Math.max(100, Number(this.config.onJoinDelayMs) || 1200);
-    this.addLog('info', undefined, `[Bot] On-join automation scheduled in ${(delayMs / 1000).toFixed(1)}s: "${commandPayload}"`);
 
     this.joinCommandTimer = setTimeout(() => {
       this.joinCommandTimer = null;
+      this.onJoinCommandScheduled = false;
       if (!this.bot || !this.botStateConnected) return;
+      if (this.onJoinCommandExecuted && !force) return;
 
-      // Split multiple commands if separated by newlines, semicolons, or '&&'
-      const rawCommands = commandPayload
-        .split(/\r?\n|;|&&/)
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0);
-
-      rawCommands.forEach((cmd, idx) => {
-        setTimeout(() => {
-          if (!this.bot || !this.botStateConnected) return;
-          try {
-            this.bot.chat(cmd);
-            this.lastActivity = Date.now();
-            const logText = `Auto : "${cmd}"`;
-            this.addLog('bot_sent', this.config.username, logText, undefined, true);
-            this.emitUpdate();
-          } catch (err: any) {
-            this.addLog('error', undefined, `[Bot] Failed sending join command "${cmd}": ${err.message}`);
-          }
-        }, idx * 350); // 350ms spacing between multiple commands
-      });
+      this.onJoinCommandExecuted = true;
+      this.dispatchOnJoinPayload(commandPayload);
     }, delayMs);
+  }
+
+  private dispatchOnJoinPayload(commandPayload: string) {
+    if (!this.bot || !this.botStateConnected) return;
+
+    // Split multiple commands if separated by newlines, semicolons, or '&&'
+    const rawCommands = commandPayload
+      .split(/\r?\n|;|&&/)
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
+
+    rawCommands.forEach((cmd, idx) => {
+      setTimeout(() => {
+        if (!this.bot || !this.botStateConnected) return;
+        try {
+          this.sendRawChatMessage(cmd);
+          this.lastActivity = Date.now();
+          this.recentSentMessages.push({ text: cmd.trim().toLowerCase(), time: Date.now() });
+          if (this.recentSentMessages.length > 25) {
+            this.recentSentMessages.shift();
+          }
+          const logText = `Auto : "${cmd}"`;
+          this.addLog('bot_sent', this.config.username, logText, undefined, true);
+          this.emitUpdate();
+        } catch (err: any) {
+          this.addLog('error', undefined, `[Bot] Failed sending join command "${cmd}": ${err.message}`);
+        }
+      }, idx * 350); // 350ms spacing between multiple commands
+    });
   }
 
   // Dynamically re-applies modules & anti-AFK settings when updated on the fly
   private reapplyModules() {
     if (!this.bot || !this.botStateConnected) return;
     this.clearAllIntervals();
-    this.initializeSlobosModules(this.mcData, this.defaultMove);
+    this.initializeAntiAfk();
+    if (this.mcData && this.defaultMove) {
+      this.initializeSlobosModules(this.mcData, this.defaultMove);
+    }
+  }
+
+  // ============================================================
+  // BULLETPROOF ANTI-AFK ENGINE (INDEPENDENT OF PATHFINDER)
+  // ============================================================
+  public initializeAntiAfk() {
+    const antiAfk = this.config.antiAfk || {
+      enabled: true,
+      intervalSeconds: 20,
+      movementType: 'safe_in_place',
+      strafeDurationMs: 400,
+      swingArm: true,
+      sneakWiggle: true,
+    };
+
+    if (antiAfk.enabled === false) return;
+
+    const intervalMs = Math.max(3000, (antiAfk.intervalSeconds || 20) * 1000);
+    const strafeMs = Math.max(200, antiAfk.strafeDurationMs || 350);
+    const movType = antiAfk.movementType || 'safe_in_place';
+
+    this.addInterval(() => {
+      if (!this.bot || !this.botStateConnected) return;
+      this.executeAntiAfkRoutine(movType, strafeMs, antiAfk);
+    }, intervalMs);
+
+    // Initial warm-up routine after 3s so bot registers anti-afk immediately
+    setTimeout(() => {
+      if (this.bot && this.botStateConnected && antiAfk.enabled !== false) {
+        this.executeAntiAfkRoutine(movType, strafeMs, antiAfk);
+      }
+    }, 3000);
+  }
+
+  public executeAntiAfkRoutine(movType: string, strafeMs: number, antiAfk: any) {
+    if (!this.bot || !this.botStateConnected) return;
+
+    try {
+      if (movType === 'strafe_lr') {
+        if (typeof this.bot.setControlState === 'function') {
+          this.bot.setControlState('left', true);
+          setTimeout(() => {
+            if (!this.bot || !this.botStateConnected) return;
+            this.bot.setControlState('left', false);
+            setTimeout(() => {
+              if (!this.bot || !this.botStateConnected) return;
+              this.bot.setControlState('right', true);
+              setTimeout(() => {
+                if (this.bot && typeof this.bot.setControlState === 'function') {
+                  this.bot.setControlState('right', false);
+                }
+              }, strafeMs);
+            }, 80);
+          }, strafeMs);
+        }
+      } else if (movType === 'jump_strafe') {
+        if (typeof this.bot.setControlState === 'function') {
+          this.bot.setControlState('jump', true);
+          this.bot.setControlState('left', true);
+          setTimeout(() => {
+            if (!this.bot || !this.botStateConnected) return;
+            this.bot.setControlState('jump', false);
+            this.bot.setControlState('left', false);
+            setTimeout(() => {
+              if (!this.bot || !this.botStateConnected) return;
+              this.bot.setControlState('right', true);
+              setTimeout(() => {
+                if (this.bot && typeof this.bot.setControlState === 'function') {
+                  this.bot.setControlState('right', false);
+                }
+              }, strafeMs);
+            }, 80);
+          }, strafeMs);
+        }
+      } else if (movType === 'rotate_look') {
+        const yaw = Math.random() * Math.PI * 2 - Math.PI;
+        const pitch = (Math.random() * Math.PI) / 3 - Math.PI / 6;
+        if (typeof this.bot.look === 'function') {
+          this.bot.look(yaw, pitch, false);
+        }
+      } else if (movType === 'full_routine') {
+        const yaw = Math.random() * Math.PI * 2 - Math.PI;
+        if (typeof this.bot.look === 'function') {
+          this.bot.look(yaw, 0, false);
+        }
+        if (typeof this.bot.setControlState === 'function') {
+          this.bot.setControlState('jump', true);
+          this.bot.setControlState('left', true);
+          setTimeout(() => {
+            if (!this.bot || !this.botStateConnected) return;
+            this.bot.setControlState('jump', false);
+            this.bot.setControlState('left', false);
+            setTimeout(() => {
+              if (!this.bot || !this.botStateConnected) return;
+              this.bot.setControlState('right', true);
+              setTimeout(() => {
+                if (this.bot && typeof this.bot.setControlState === 'function') {
+                  this.bot.setControlState('right', false);
+                }
+              }, strafeMs);
+            }, 80);
+          }, strafeMs);
+        }
+      } else {
+        // 'safe_in_place' (default)
+        if (typeof this.bot.look === 'function' && this.bot.entity) {
+          const currentYaw = this.bot.entity.yaw || 0;
+          const currentPitch = this.bot.entity.pitch || 0;
+          const deltaYaw = Math.random() * 0.4 - 0.2;
+          const deltaPitch = Math.random() * 0.2 - 0.1;
+          this.bot.look(
+            currentYaw + deltaYaw,
+            Math.max(-1.4, Math.min(1.4, currentPitch + deltaPitch)),
+            false
+          );
+        }
+      }
+
+      // Universal arm swing
+      if (antiAfk?.swingArm !== false && typeof this.bot.swingArm === 'function') {
+        this.bot.swingArm();
+      }
+
+      // Universal sneak wiggle
+      if (antiAfk?.sneakWiggle !== false && typeof this.bot.setControlState === 'function') {
+        this.bot.setControlState('sneak', true);
+        setTimeout(() => {
+          if (this.bot && typeof this.bot.setControlState === 'function') {
+            this.bot.setControlState('sneak', false);
+          }
+        }, 220);
+      }
+
+      // Universal hotbar rotation
+      if (typeof this.bot.setQuickBarSlot === 'function') {
+        const slot = Math.floor(Math.random() * 9);
+        this.bot.setQuickBarSlot(slot);
+        this.quickBarSlot = slot;
+      }
+
+      this.lastActivity = Date.now();
+      this.emitUpdate();
+    } catch (e: any) {
+      this.addLog('error', 'AntiAFK', `[AntiAFK] Routine error: ${e.message}`);
+    }
   }
 
   // ============================================================
@@ -467,9 +793,9 @@ export class BotInstance extends EventEmitter {
         this.emitUpdate();
       };
 
-      this.bot.on('messagestr', (message: string) => {
+      this.bot.on('message', (jsonMsg: any) => {
         if (authHandled) return;
-        const msg = message.toLowerCase();
+        const msg = jsonMsg.toString().toLowerCase();
         if (
           msg.includes('/register') ||
           msg.includes('register ') ||
@@ -526,120 +852,11 @@ export class BotInstance extends EventEmitter {
       }
     }
 
-    // ---------- 4. ANTI-AFK ENGINE ----------
-    const antiAfk = this.config.antiAfk || {
-      enabled: true,
-      intervalSeconds: 20,
-      movementType: 'safe_in_place',
-      strafeDurationMs: 400,
-      swingArm: true,
-      sneakWiggle: true,
-    };
-
-    if (antiAfk.enabled !== false) {
-      const intervalMs = Math.max(4000, (antiAfk.intervalSeconds || 20) * 1000);
-      const strafeMs = Math.max(200, antiAfk.strafeDurationMs || 350);
-
-      this.addInterval(() => {
-        if (!this.bot || !this.botStateConnected) return;
-        const movType = antiAfk.movementType || 'safe_in_place';
-
-        try {
-          if (movType === 'strafe_lr') {
-            if (typeof this.bot.setControlState === 'function') {
-              this.bot.setControlState('left', true);
-              setTimeout(() => {
-                if (!this.bot || !this.botStateConnected) return;
-                this.bot.setControlState('left', false);
-                setTimeout(() => {
-                  if (!this.bot || !this.botStateConnected) return;
-                  this.bot.setControlState('right', true);
-                  setTimeout(() => {
-                    if (this.bot && typeof this.bot.setControlState === 'function') {
-                      this.bot.setControlState('right', false);
-                    }
-                  }, strafeMs);
-                }, 100);
-              }, strafeMs);
-            }
-          } else if (movType === 'jump_strafe') {
-            if (typeof this.bot.setControlState === 'function') {
-              this.bot.setControlState('jump', true);
-              this.bot.setControlState('left', true);
-              setTimeout(() => {
-                if (!this.bot || !this.botStateConnected) return;
-                this.bot.setControlState('jump', false);
-                this.bot.setControlState('left', false);
-                setTimeout(() => {
-                  if (!this.bot || !this.botStateConnected) return;
-                  this.bot.setControlState('right', true);
-                  setTimeout(() => {
-                    if (this.bot && typeof this.bot.setControlState === 'function') {
-                      this.bot.setControlState('right', false);
-                    }
-                  }, strafeMs);
-                }, 100);
-              }, strafeMs);
-            }
-          } else if (movType === 'rotate_look') {
-            const yaw = Math.random() * Math.PI * 2 - Math.PI;
-            const pitch = (Math.random() * Math.PI) / 2 - Math.PI / 4;
-            this.bot.look(yaw, pitch, false);
-          } else if (movType === 'full_routine') {
-            const yaw = Math.random() * Math.PI * 2 - Math.PI;
-            this.bot.look(yaw, 0, false);
-            if (typeof this.bot.setControlState === 'function') {
-              this.bot.setControlState('jump', true);
-              this.bot.setControlState('left', true);
-              setTimeout(() => {
-                if (!this.bot || !this.botStateConnected) return;
-                this.bot.setControlState('jump', false);
-                this.bot.setControlState('left', false);
-                setTimeout(() => {
-                  if (!this.bot || !this.botStateConnected) return;
-                  this.bot.setControlState('right', true);
-                  setTimeout(() => {
-                    if (this.bot && typeof this.bot.setControlState === 'function') {
-                      this.bot.setControlState('right', false);
-                    }
-                  }, strafeMs);
-                }, 100);
-              }, strafeMs);
-            }
-          }
-
-          // Universal actions
-          if (antiAfk.swingArm !== false && typeof this.bot.swingArm === 'function') {
-            this.bot.swingArm();
-          }
-
-          if (antiAfk.sneakWiggle !== false && typeof this.bot.setControlState === 'function') {
-            this.bot.setControlState('sneak', true);
-            setTimeout(() => {
-              if (this.bot && typeof this.bot.setControlState === 'function') {
-                this.bot.setControlState('sneak', false);
-              }
-            }, 200);
-          }
-
-          if (typeof this.bot.setQuickBarSlot === 'function') {
-            const slot = Math.floor(Math.random() * 9);
-            this.bot.setQuickBarSlot(slot);
-            this.quickBarSlot = slot;
-          }
-
-          this.lastActivity = Date.now();
-        } catch (e: any) {
-          this.addLog('error', undefined, `[AntiAFK] Routine error: ${e.message}`);
-        }
-      }, intervalMs);
-
-      // Sneak holding if explicitly requested in slobosSettings
-      if (slobos.antiAfk?.sneak && typeof this.bot.setControlState === 'function') {
-        try {
-          this.bot.setControlState('sneak', true);
-        } catch {}
-      }
+    // Sneak holding if explicitly requested in slobosSettings
+    if (slobos.antiAfk?.sneak && typeof this.bot.setControlState === 'function') {
+      try {
+        this.bot.setControlState('sneak', true);
+      } catch {}
     }
 
     // ---------- 5. MOVEMENT MODULES ----------
@@ -996,6 +1213,9 @@ export class BotInstance extends EventEmitter {
       this.bot = null;
     }
     this.botStateConnected = false;
+    this.lastPromptAuthTime = 0;
+    this.onJoinCommandExecuted = false;
+    this.onJoinCommandScheduled = false;
   }
 
   private addInterval(callback: () => void, delay: number) {
@@ -1030,6 +1250,7 @@ export class BotInstance extends EventEmitter {
       clearTimeout(this.joinCommandTimer);
       this.joinCommandTimer = null;
     }
+    this.onJoinCommandScheduled = false;
   }
 
   private clearAllTimers() {
@@ -1060,9 +1281,37 @@ export class BotInstance extends EventEmitter {
     this.emit('update', this.getState());
   }
 
-  // Compatibility Stubs for UI controls
-  public startAfkLoop() {}
-  public stopAfkLoop() {}
+  // Compatibility methods for UI controls
+  public startAfkLoop() {
+    this.config.antiAfk = {
+      intervalSeconds: 20,
+      movementType: 'safe_in_place',
+      strafeDurationMs: 400,
+      swingArm: true,
+      sneakWiggle: true,
+      ...(this.config.antiAfk || {}),
+      enabled: true,
+    };
+    this.reapplyModules();
+    this.addLog('info', 'AntiAFK', '[AntiAFK] Anti-AFK engine enabled');
+    this.emitUpdate();
+  }
+
+  public stopAfkLoop() {
+    this.config.antiAfk = {
+      intervalSeconds: 20,
+      movementType: 'safe_in_place',
+      strafeDurationMs: 400,
+      swingArm: true,
+      sneakWiggle: true,
+      ...(this.config.antiAfk || {}),
+      enabled: false,
+    };
+    this.reapplyModules();
+    this.addLog('info', 'AntiAFK', '[AntiAFK] Anti-AFK engine disabled');
+    this.emitUpdate();
+  }
+
   public startViewer() { return null; }
   public stopViewer() {}
   public resetViewerIdleTimeout() {}
@@ -1094,86 +1343,7 @@ export class BotInstance extends EventEmitter {
     const strafeMs = Math.max(200, antiAfk.strafeDurationMs || 350);
 
     try {
-      if (movType === 'strafe_lr') {
-        if (typeof this.bot.setControlState === 'function') {
-          this.bot.setControlState('left', true);
-          setTimeout(() => {
-            if (!this.bot || !this.botStateConnected) return;
-            this.bot.setControlState('left', false);
-            setTimeout(() => {
-              if (!this.bot || !this.botStateConnected) return;
-              this.bot.setControlState('right', true);
-              setTimeout(() => {
-                if (this.bot && typeof this.bot.setControlState === 'function') {
-                  this.bot.setControlState('right', false);
-                }
-              }, strafeMs);
-            }, 100);
-          }, strafeMs);
-        }
-      } else if (movType === 'jump_strafe') {
-        if (typeof this.bot.setControlState === 'function') {
-          this.bot.setControlState('jump', true);
-          this.bot.setControlState('left', true);
-          setTimeout(() => {
-            if (!this.bot || !this.botStateConnected) return;
-            this.bot.setControlState('jump', false);
-            this.bot.setControlState('left', false);
-            setTimeout(() => {
-              if (!this.bot || !this.botStateConnected) return;
-              this.bot.setControlState('right', true);
-              setTimeout(() => {
-                if (this.bot && typeof this.bot.setControlState === 'function') {
-                  this.bot.setControlState('right', false);
-                }
-              }, strafeMs);
-            }, 100);
-          }, strafeMs);
-        }
-      } else if (movType === 'rotate_look') {
-        const yaw = Math.random() * Math.PI * 2 - Math.PI;
-        const pitch = Math.random() * Math.PI / 4 - Math.PI / 8;
-        this.bot.look(yaw, pitch, false);
-      } else if (movType === 'full_routine') {
-        const yaw = Math.random() * Math.PI * 2 - Math.PI;
-        this.bot.look(yaw, 0, false);
-        if (typeof this.bot.setControlState === 'function') {
-          this.bot.setControlState('jump', true);
-          this.bot.setControlState('left', true);
-          setTimeout(() => {
-            if (!this.bot || !this.botStateConnected) return;
-            this.bot.setControlState('jump', false);
-            this.bot.setControlState('left', false);
-            setTimeout(() => {
-              if (!this.bot || !this.botStateConnected) return;
-              this.bot.setControlState('right', true);
-              setTimeout(() => {
-                if (this.bot && typeof this.bot.setControlState === 'function') {
-                  this.bot.setControlState('right', false);
-                }
-              }, strafeMs);
-            }, 100);
-          }, strafeMs);
-        }
-      }
-
-      // Universal actions
-      if (typeof this.bot.swingArm === 'function') this.bot.swingArm();
-      const slot = Math.floor(Math.random() * 9);
-      if (typeof this.bot.setQuickBarSlot === 'function') {
-        this.bot.setQuickBarSlot(slot);
-        this.quickBarSlot = slot;
-      }
-      if (typeof this.bot.setControlState === 'function') {
-        this.bot.setControlState('sneak', true);
-        setTimeout(() => {
-          if (this.bot && typeof this.bot.setControlState === 'function') {
-            this.bot.setControlState('sneak', false);
-          }
-        }, 250);
-      }
-
-      this.lastActivity = Date.now();
+      this.executeAntiAfkRoutine(movType, strafeMs, antiAfk);
       this.addLog('info', 'AntiAFK', `[AntiAFK] Executed "${movType}" test routine`);
       this.emitUpdate();
     } catch (e: any) {
