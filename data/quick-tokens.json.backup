@@ -1,0 +1,57 @@
+{
+  "ninimo-qk-db4157a69df622a5657fdef5c7fae87df76687bb9c8abe47": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789381171714
+  },
+  "ninimo-qk-5d0df25bb8e88720971f892cd3cf523899b344de5f83878c": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789382533484
+  },
+  "ninimo-qk-8c6f615be587ba0bf6f9ded1030e1e9f5bfdb50e18b3d142": {
+    "userId": "SA4PxloJmph6WFRylBn3F7qfAaq1",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789382645022
+  },
+  "ninimo-qk-00c8dbe2728de271cba549c9ba54503010238d2e694b7d95": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789383122021
+  },
+  "ninimo-qk-a2c716be2587126f236e20188bcf43ebedc928fdf20c4aa6": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789384631453
+  },
+  "ninimo-qk-7713e7f7bd4fe5a5fbf781553ba587d320d487803dc31614": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "dev_7ede0337_w3sgpjnp",
+    "createdAt": 1789384752809
+  },
+  "ninimo-qk-12c62d9ef1475812a32dcec2e406f965289b6b4bec94cde1": {
+    "userId": "user-1789493618826-3e0tan",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789493618827
+  },
+  "ninimo-qk-55c1e56769ba6205e59b5b7724e3b31007241b726853226e": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789493633167
+  },
+  "ninimo-qk-b26c941a783288a247231f3e086f34aef3bf703a7f6ea924": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789493948766
+  },
+  "ninimo-qk-5bd11cd5029ff13c7b104eec82fe45688a70f16463ffa122": {
+    "userId": "SA4PxloJmph6WFRylBn3F7qfAaq1",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789493962123
+  },
+  "ninimo-qk-bc1d6743f520e7dec15e7615cedf2347c46564ddcc24f0d1": {
+    "userId": "user-admin-shifin",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789501166770
+  }
+}

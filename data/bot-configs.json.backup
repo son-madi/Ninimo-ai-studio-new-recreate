@@ -1,0 +1,80 @@
+[
+  {
+    "id": "bot-1789097981155-zahz",
+    "userId": "user-admin-shifin",
+    "deviceId": "ip_127_0_0_1",
+    "clientIp": "127.0.0.1",
+    "name": "NinimoBot",
+    "host": "play.hypixel.net",
+    "port": 25565,
+    "username": "NinimoBot",
+    "auth": "offline",
+    "password": "",
+    "version": "",
+    "autoReconnect": true,
+    "reconnectDelaySeconds": 5,
+    "onJoinCommand": "",
+    "onJoinDelayMs": 2000,
+    "antiAfk": {
+      "enabled": true,
+      "intervalSeconds": 30,
+      "movementType": "strafe_lr",
+      "strafeDurationMs": 400,
+      "swingArm": true,
+      "sneakWiggle": true
+    },
+    "shouldRun": true
+  },
+  {
+    "id": "bot-1789382645022-g0lq",
+    "userId": "SA4PxloJmph6WFRylBn3F7qfAaq1",
+    "deviceId": "dev_7ede0337_w3sgpjnp",
+    "clientIp": "59.182.139.1",
+    "name": "NinimoBot",
+    "host": "play.hypixel.net",
+    "port": 25565,
+    "username": "NinimoBot",
+    "auth": "offline",
+    "password": "",
+    "version": "",
+    "autoReconnect": true,
+    "reconnectDelaySeconds": 5,
+    "onJoinCommand": "",
+    "onJoinDelayMs": 2000,
+    "antiAfk": {
+      "enabled": true,
+      "intervalSeconds": 30,
+      "movementType": "strafe_lr",
+      "strafeDurationMs": 400,
+      "swingArm": true,
+      "sneakWiggle": true
+    },
+    "shouldRun": true
+  },
+  {
+    "id": "bot-1789493618827-1e1d",
+    "userId": "user-1789493618826-3e0tan",
+    "deviceId": "ip_127_0_0_1",
+    "clientIp": "127.0.0.1",
+    "name": "NinimoBot",
+    "host": "play.hypixel.net",
+    "port": 25565,
+    "username": "NinimoBot",
+    "auth": "offline",
+    "password": "",
+    "version": "",
+    "autoReconnect": true,
+    "reconnectDelaySeconds": 5,
+    "onJoinCommand": "",
+    "onJoinDelayMs": 2000,
+    "antiAfk": {
+      "enabled": true,
+      "intervalSeconds": 30,
+      "movementType": "strafe_lr",
+      "strafeDurationMs": 400,
+      "swingArm": true,
+      "sneakWiggle": true
+    },
+    "shouldRun": true
+  }
+]

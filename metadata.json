@@ -1,0 +1,8 @@
+{
+  "name": "Remix Ninimo Last remix",
+  "description": "24/7 Minecraft bot manager with cracked and premium login, anti-AFK movement, auto-reconnect, and live chat console.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

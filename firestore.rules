@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all for Zero-Trust Firestore Security
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Connection health test document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Users collection: Private user profiles, restricted to the owner
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Blanket enumeration forbidden to protect PII
+      allow create: if isOwner(userId) 
+        && isValidId(userId) 
+        && incoming().id == userId;
+      allow update: if isOwner(userId) 
+        && isValidId(userId) 
+        && incoming().id == userId;
+      allow delete: if false;
+
+      // User-isolated bot configurations
+      match /bots/{botId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) 
+          && isValidId(botId) 
+          && incoming().userId == userId;
+        allow update: if isOwner(userId) 
+          && isValidId(botId) 
+          && incoming().userId == userId;
+        allow delete: if isOwner(userId) && isValidId(botId);
+      }
+    }
+
+    // Community general chat persistent storage
+    match /general_chat/{messageId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn()
+        && isValidId(messageId)
+        && incoming().userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || request.auth.token.admin == true);
+    }
+  }
+}

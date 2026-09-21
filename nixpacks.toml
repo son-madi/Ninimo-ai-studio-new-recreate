@@ -1,0 +1,12 @@
+# Railway Nixpacks deployment configuration
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node --expose-gc --max-old-space-size=384 index.js"

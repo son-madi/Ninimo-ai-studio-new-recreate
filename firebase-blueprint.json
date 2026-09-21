@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and commander account details",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID matching auth UID",
+          "maxLength": 128
+        },
+        "username": {
+          "type": "string",
+          "description": "Display username",
+          "maxLength": 32,
+          "minLength": 3
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address",
+          "maxLength": 128
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Profile picture URL",
+          "maxLength": 500
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Administrator privileges"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["id", "username", "email", "createdAt"]
+    },
+    "BotConfig": {
+      "title": "BotConfig",
+      "description": "Persistent Minecraft bot configuration",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Bot unique identifier",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner UID",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Bot display and Minecraft username",
+          "maxLength": 32,
+          "minLength": 2
+        },
+        "host": {
+          "type": "string",
+          "description": "Minecraft server address",
+          "maxLength": 128
+        },
+        "port": {
+          "type": "number",
+          "description": "Minecraft server port number"
+        },
+        "version": {
+          "type": "string",
+          "description": "Minecraft game version",
+          "maxLength": 32
+        },
+        "auth": {
+          "type": "string",
+          "enum": ["offline", "microsoft"],
+          "description": "Minecraft authentication mode"
+        },
+        "autoReconnect": {
+          "type": "boolean",
+          "description": "Automatically reconnect upon disconnection"
+        },
+        "shouldRun": {
+          "type": "boolean",
+          "description": "Whether bot should automatically connect and run 24/7"
+        },
+        "antiAfk": {
+          "type": "boolean",
+          "description": "Enable anti-AFK movement simulation"
+        },
+        "antiAfkMode": {
+          "type": "string",
+          "enum": ["circle", "jump", "look", "random", "sneak", "patrol"],
+          "description": "Movement pattern for anti-AFK"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "userId", "name", "host", "port"]
+    },
+    "GeneralChatMessage": {
+      "title": "GeneralChatMessage",
+      "description": "Persistent community chat message",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Message ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Sender User ID",
+          "maxLength": 128
+        },
+        "username": {
+          "type": "string",
+          "description": "Sender username",
+          "maxLength": 64
+        },
+        "text": {
+          "type": "string",
+          "description": "Message text content",
+          "maxLength": 2000
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp in ms"
+        }
+      },
+      "required": ["id", "userId", "username", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document"
+    },
+    "/users/{userId}/bots/{botId}": {
+      "schema": "BotConfig",
+      "description": "Saved bot configurations belonging to the user"
+    },
+    "/general_chat/{messageId}": {
+      "schema": "GeneralChatMessage",
+      "description": "General community chat message history"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "user-1788980506988-fn3pgw",
+    "username": "Lol",
+    "email": "gamershifin75@gmail.com",
+    "passwordHash": "d4fcf64c382a7faa18e529eab189cf2a82b11d192aef718fcd98fb8636b1c4dc0d8f74f6f13ee50092264bda2f77875257b218d2a70a43d5227c8507ed46b029",
+    "salt": "f86cf0ceff8871ed22896296a4495910",
+    "createdAt": 1788980506988,
+    "normalizedEmail": "gamershifin75@gmail.com",
+    "isAdmin": true
+  },
+  {
+    "id": "user-admin-shifin",
+    "username": "Shifin",
+    "email": "shifinkallan16@gmail.com",
+    "normalizedEmail": "shifinkallan16@gmail.com",
+    "passwordHash": "f61410abb42ff8a8a0a4af557ac71ed1370ce49c1d7b25a091598b2c6d3005a517e80b7dc323f3a37128d6fa0f75059bb3363a7adadc424ac9a08d9a11a55ba6",
+    "salt": "4c96271f64342f4e915dbe156ebd2d88",
+    "isAdmin": true,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1700000000000,
+    "plainPassword": "0508552513",
+    "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJe4LAEPPIYhKnYyJiWc9GGNEc4-EsjUWfKdDzpjM9u2A-SY_9Geg=s96-c"
+  },
+  {
+    "id": "user-tester-special",
+    "username": "TESTER",
+    "email": "tester@ninimo.local",
+    "normalizedEmail": "tester@ninimo.local",
+    "passwordHash": "f71c049414df102df4e662fc381cccfcbee0619549584b4dc07062b314e622191243fe303b47d45991b69d6f467be8cba7f13a303ffc92e1c5568760f97f58d5",
+    "salt": "e5f9abb0468f62257ee125e64c68f1e5",
+    "isAdmin": false,
+    "isTester": true,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "tester-device",
+    "createdAt": 1700000000000,
+    "plainPassword": "TESTER"
+  },
+  {
+    "id": "SA4PxloJmph6WFRylBn3F7qfAaq1",
+    "username": "ShifinMhd",
+    "email": "shifin67e@gmail.com",
+    "normalizedEmail": "shifin67e@gmail.com",
+    "passwordHash": "946b6cf8cb43bab2fb404d20f12215ada419495c25a537f3ff2980d69558a12284b3869fec05a8c2261b4ac27d8cf389217a63dd9c7a4f7012efdaee78efe224",
+    "salt": "e3865a47cc5f16177d1336466d19aeaf",
+    "isAdmin": true,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789382645021,
+    "plainPassword": "0508552513"
+  },
+  {
+    "id": "user-1789493618826-3e0tan",
+    "username": "testuser123",
+    "email": "test1234@test.com",
+    "normalizedEmail": "test1234@test.com",
+    "passwordHash": "fee949e2262630e0193fc73728b9569d609dc4b7151a54ba34c70169cf76343a44c7ba900aa7ca8558ece9aa68735504811e25d7ed0edf06b5833e6ddb14f4f6",
+    "salt": "29db663815a3a5ee80e20d2d3163f97c",
+    "plainPassword": "password123",
+    "isAdmin": false,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1789493618826
+  }
+]

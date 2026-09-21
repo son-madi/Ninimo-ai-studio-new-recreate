@@ -1,0 +1,37 @@
+[
+  {
+    "id": "user-1788980506988-fn3pgw",
+    "username": "Lol",
+    "email": "gamershifin75@gmail.com",
+    "passwordHash": "d4fcf64c382a7faa18e529eab189cf2a82b11d192aef718fcd98fb8636b1c4dc0d8f74f6f13ee50092264bda2f77875257b218d2a70a43d5227c8507ed46b029",
+    "salt": "f86cf0ceff8871ed22896296a4495910",
+    "createdAt": 1788980506988,
+    "normalizedEmail": "gamershifin75@gmail.com",
+    "isAdmin": true
+  },
+  {
+    "id": "user-admin-shifin",
+    "username": "Shifin",
+    "email": "shifinkallan16@gmail.com",
+    "normalizedEmail": "shifinkallan16@gmail.com",
+    "passwordHash": "f61410abb42ff8a8a0a4af557ac71ed1370ce49c1d7b25a091598b2c6d3005a517e80b7dc323f3a37128d6fa0f75059bb3363a7adadc424ac9a08d9a11a55ba6",
+    "salt": "4c96271f64342f4e915dbe156ebd2d88",
+    "isAdmin": true,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "ip_127_0_0_1",
+    "createdAt": 1700000000000
+  },
+  {
+    "id": "user-tester-special",
+    "username": "TESTER",
+    "email": "tester@ninimo.local",
+    "normalizedEmail": "tester@ninimo.local",
+    "passwordHash": "f71c049414df102df4e662fc381cccfcbee0619549584b4dc07062b314e622191243fe303b47d45991b69d6f467be8cba7f13a303ffc92e1c5568760f97f58d5",
+    "salt": "e5f9abb0468f62257ee125e64c68f1e5",
+    "isAdmin": false,
+    "isTester": true,
+    "registrationIp": "127.0.0.1",
+    "deviceFingerprint": "tester-device",
+    "createdAt": 1700000000000
+  }
+]

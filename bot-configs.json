@@ -1,0 +1,27 @@
+[
+  {
+    "id": "bot-1789097981155-zahz",
+    "userId": "user-admin-shifin",
+    "deviceId": "ip_127_0_0_1",
+    "clientIp": "127.0.0.1",
+    "name": "NinimoBot",
+    "host": "play.hypixel.net",
+    "port": 25565,
+    "username": "NinimoBot",
+    "auth": "offline",
+    "password": "",
+    "version": "",
+    "autoReconnect": true,
+    "reconnectDelaySeconds": 5,
+    "onJoinCommand": "",
+    "onJoinDelayMs": 2000,
+    "antiAfk": {
+      "enabled": true,
+      "intervalSeconds": 30,
+      "movementType": "strafe_lr",
+      "strafeDurationMs": 400,
+      "swingArm": true,
+      "sneakWiggle": true
+    }
+  }
+]

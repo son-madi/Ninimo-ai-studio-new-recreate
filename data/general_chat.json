@@ -1,0 +1,49 @@
+[
+  {
+    "id": "msg-1789771069087-eumy8w",
+    "userId": "user-admin-shifin",
+    "username": "Shifin",
+    "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJe4LAEPPIYhKnYyJiWc9GGNEc4-EsjUWfKdDzpjM9u2A-SY_9Geg=s96-c",
+    "isAdmin": true,
+    "isDev": true,
+    "text": "Heyyoo wassup chat",
+    "createdAt": 1789771069087
+  },
+  {
+    "id": "msg-1789771077922-tb8c0n",
+    "userId": "user-admin-shifin",
+    "username": "Shifin",
+    "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJe4LAEPPIYhKnYyJiWc9GGNEc4-EsjUWfKdDzpjM9u2A-SY_9Geg=s96-c",
+    "isAdmin": true,
+    "isDev": true,
+    "text": "Scooby",
+    "createdAt": 1789771077922
+  },
+  {
+    "id": "msg-1789866748279-d0mcly",
+    "userId": "user-1789831383232-7m5358",
+    "username": "ZenpaiDemonn",
+    "isAdmin": false,
+    "isDev": false,
+    "text": "Yooo",
+    "createdAt": 1789866748279
+  },
+  {
+    "id": "msg-1789866758246-ym377b",
+    "userId": "user-1789831383232-7m5358",
+    "username": "ZenpaiDemonn",
+    "isAdmin": false,
+    "isDev": false,
+    "text": "Why the bot is not working",
+    "createdAt": 1789866758246
+  },
+  {
+    "id": "msg-1789866775833-444ffa",
+    "userId": "user-1789831383232-7m5358",
+    "username": "ZenpaiDemonn",
+    "isAdmin": false,
+    "isDev": false,
+    "text": "Connection handshake timeout",
+    "createdAt": 1789866775833
+  }
+]
