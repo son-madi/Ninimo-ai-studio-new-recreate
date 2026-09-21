@@ -74,7 +74,13 @@ export const BotWorkspace: React.FC<BotWorkspaceProps> = ({
               activeBot.status === 'error' ? 'bg-rose-500' : 'bg-zinc-500'
             }`} />
             <span className="truncate max-w-[100px] sm:max-w-none text-sm sm:text-base">{activeBot.config.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-mono font-black uppercase tracking-wider shadow-xs">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-black uppercase tracking-wider shadow-xs ${
+              isColourUI
+                ? 'bg-amber-400 text-zinc-950'
+                : isDark
+                ? 'bg-amber-400 text-zinc-950'
+                : 'bg-black text-white'
+            }`}>
               3D BETA
             </span>
             <span className={`hidden sm:inline-block text-xs px-2 py-0.5 rounded-full font-mono ${

@@ -51,7 +51,7 @@ export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
               ? 'bg-amber-950/60 border-amber-500/60 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
               : isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-200' : 'bg-zinc-100 border-zinc-300 text-zinc-800'
           }`}>
-            <Zap className="w-4 h-4 text-amber-400" />
+            <Zap className={`w-4 h-4 ${isColourUI || isDark ? 'text-amber-400' : 'text-black'}`} />
           </div>
           <div>
             <h3 className={`text-sm font-bold flex items-center gap-2 ${
@@ -61,7 +61,7 @@ export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
               <span className={`text-[10px] border px-2.5 py-0.5 rounded-full font-mono font-bold ${
                 isColourUI
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-xs'
-                  : isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-zinc-100 text-zinc-700 border-zinc-300'
+                  : isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-black text-white border-black'
               }`}>
                 Active Routine
               </span>
@@ -106,7 +106,7 @@ export const AntiAfkCard: React.FC<AntiAfkCardProps> = ({
             <label className={`font-semibold flex items-center gap-1.5 ${
               isColourUI ? 'text-sky-300' : isDark ? 'text-zinc-300' : 'text-zinc-700'
             }`}>
-              <Clock className={`w-3.5 h-3.5 ${isColourUI ? 'text-sky-400' : 'text-zinc-400'}`} />
+              <Clock className={`w-3.5 h-3.5 ${isColourUI ? 'text-sky-400' : isDark ? 'text-zinc-400' : 'text-black'}`} />
               Execution Interval
             </label>
             <span className={`font-mono font-bold px-2.5 py-0.5 rounded-full border ${

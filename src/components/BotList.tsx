@@ -195,34 +195,40 @@ export const BotList: React.FC<BotListProps> = ({
               }`}>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`font-bold uppercase text-[10px] px-2.5 py-0.5 rounded-full border ${
+                    className={`font-extrabold uppercase text-[10px] px-2.5 py-0.5 rounded-full border ${
                       isOnline
                         ? isColourUI
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/60 shadow-xs'
-                          : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                          : isDark
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                          : 'bg-black text-white border-black'
                         : isReconnecting
                         ? isColourUI
                           ? 'bg-amber-500/20 text-amber-300 border-amber-400/60'
-                          : 'bg-amber-500/15 text-amber-400 border-amber-500/40'
+                          : isDark
+                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/40'
+                          : 'bg-zinc-800 text-white border-zinc-800'
                         : isStarting
                         ? isColourUI
                           ? 'bg-sky-500/20 text-sky-300 border-sky-400/60'
-                          : 'bg-blue-500/15 text-blue-400 border-blue-500/40'
+                          : isDark
+                          ? 'bg-blue-500/15 text-blue-400 border-blue-500/40'
+                          : 'bg-zinc-800 text-white border-zinc-800'
                         : isColourUI
                         ? 'bg-slate-800 text-slate-400 border-slate-700'
-                        : isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-zinc-100 text-zinc-500 border-zinc-300'
+                        : isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-zinc-100 text-zinc-800 border-zinc-300'
                     }`}
                   >
                     {isOnline ? 'CONNECTED' : isStarting ? 'CONNECTING' : bot.status}
                   </span>
 
                   {bot.config.antiAfk.enabled && (
-                    <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                    <span className={`flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
                       isColourUI
                         ? 'text-amber-200 bg-amber-950/60 border-amber-500/60 shadow-xs'
-                        : isDark ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-amber-700 bg-amber-50 border-amber-300'
+                        : isDark ? 'text-zinc-100 bg-zinc-800 border-zinc-700' : 'text-black bg-zinc-100 border-zinc-300'
                     }`}>
-                      <Zap className="w-3 h-3 text-amber-400" />
+                      <Zap className={`w-3 h-3 ${isColourUI ? 'text-amber-400' : isDark ? 'text-white' : 'text-black'}`} />
                       AFK ({bot.config.antiAfk.intervalSeconds}s)
                     </span>
                   )}
@@ -230,11 +236,11 @@ export const BotList: React.FC<BotListProps> = ({
 
                 <div className="font-mono text-xs">
                   {isOnline ? (
-                    <span className={`font-bold ${isColourUI ? 'text-emerald-300 drop-shadow-xs' : 'text-emerald-400'}`}>
+                    <span className={`font-extrabold ${isColourUI ? 'text-emerald-300 drop-shadow-xs' : isDark ? 'text-emerald-400' : 'text-black'}`}>
                       HP: {bot.health}/20
                     </span>
                   ) : (
-                    <span className={isColourUI ? 'text-slate-500' : ''}>Offline</span>
+                    <span className={isColourUI ? 'text-slate-500' : 'text-zinc-500'}>Offline</span>
                   )}
                 </div>
               </div>

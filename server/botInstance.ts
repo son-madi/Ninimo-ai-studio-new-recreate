@@ -107,6 +107,25 @@ export class BotInstance extends EventEmitter {
 
   public getState(): BotState {
     const uptimeSeconds = this.onlineSince ? Math.floor((Date.now() - this.onlineSince) / 1000) : 0;
+    let playersNearby: string[] = [];
+    if (this.status === 'online' && this.bot && this.bot.players) {
+      playersNearby = Object.values(this.bot.players)
+        .map((p: any) => p?.username)
+        .filter((name): name is string => typeof name === 'string' && name.length > 0);
+      if (this.config.username && !playersNearby.some(p => p.toLowerCase() === this.config.username.toLowerCase())) {
+        playersNearby.unshift(this.config.username);
+      }
+    }
+    const seen = new Set<string>();
+    const uniquePlayers: string[] = [];
+    for (const p of playersNearby) {
+      const lower = p.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        uniquePlayers.push(p);
+      }
+    }
+
     return {
       id: this.config.id,
       config: this.config,
@@ -126,7 +145,7 @@ export class BotInstance extends EventEmitter {
       nextReconnectIn: this.nextReconnectIn,
       lastError: this.lastError,
       lastAfkActionTime: this.lastActivity,
-      playersNearby: [],
+      playersNearby: uniquePlayers,
       chatHistory: this.chatHistory.slice(-150),
       inventory: this.inventory,
       quickBarSlot: this.quickBarSlot,
@@ -195,13 +214,18 @@ export class BotInstance extends EventEmitter {
   }
 
   public start() {
-    if (this.status === 'online' || this.status === 'starting' || this.isReconnecting) return;
+    if (this.status === 'online' || this.status === 'starting') return;
 
+    // Clear any existing reconnect timers/intervals when Start is explicitly triggered
+    this.clearAllTimers();
+    this.isReconnecting = false;
     this.isManuallyStopped = false;
+    this.config.shouldRun = true;
     this.status = 'starting';
     this.lastError = null;
     this.spawnHandled = false;
     this.botStateConnected = false;
+    this.nextReconnectIn = null;
     this.emitUpdate();
 
     this.createBot();
@@ -254,6 +278,7 @@ export class BotInstance extends EventEmitter {
     this.lastPromptAuthTime = 0;
 
     this.addLog('info', undefined, `[Bot] Connecting to ${this.config.host}:${this.config.port}...`);
+    this.addLog('info', undefined, `[Bot] You have a valid session`);
 
     try {
       const botVersion = this.config.version && this.config.version.trim() !== '' && this.config.version !== 'auto'
@@ -300,6 +325,8 @@ export class BotInstance extends EventEmitter {
   private attachBotListeners() {
     if (!this.bot) return;
 
+    let handledDisconnect = false;
+
     this.bot.once('login', () => {
       this.status = 'online';
       this.botStateConnected = true;
@@ -328,7 +355,7 @@ export class BotInstance extends EventEmitter {
       this.isReconnecting = false;
 
       const botIgn = this.bot?.username || this.config.username;
-      this.addLog('info', undefined, `[${botIgn}] Successfully spawned on server!`);
+      this.addLog('info', undefined, `[Bot] bot spawned in world (${botIgn})`);
 
       // Execute on-join message / command reliably
       this.executeOnJoinCommand();
@@ -513,6 +540,9 @@ export class BotInstance extends EventEmitter {
     });
 
     this.bot.on('end', (reason: string) => {
+      if (handledDisconnect) return;
+      handledDisconnect = true;
+
       const cleanReason = formatConnectionError(reason || 'Connection closed', this.config.host, this.config.port);
       this.addLog('info', undefined, `[Bot] Disconnected: ${cleanReason}`);
       this.botStateConnected = false;
@@ -528,12 +558,23 @@ export class BotInstance extends EventEmitter {
       const rawMsg = err?.message || String(err);
       const msg = formatConnectionError(rawMsg, this.config.host, this.config.port);
       this.addLog('error', undefined, `[Bot] Socket error: ${msg}`);
-      // Fallback: If 'end' event does not fire after a socket error, guarantee reconnection
-      setTimeout(() => {
-        if (!this.botStateConnected && !this.isReconnecting && !this.isManuallyStopped && (this.config.autoReconnect !== false)) {
-          this.scheduleReconnect(`Socket error: ${msg}`);
-        }
-      }, 3500);
+
+      if (!handledDisconnect && !this.isManuallyStopped) {
+        handledDisconnect = true;
+        this.scheduleReconnect(`Socket error: ${msg}`);
+      }
+    });
+
+    this.bot.on('playerJoined', () => {
+      this.emitUpdate();
+    });
+
+    this.bot.on('playerLeft', () => {
+      this.emitUpdate();
+    });
+
+    this.bot.on('whisper', (username: string, message: string) => {
+      this.addLog('whisper', username, `[Bot] ${username} whisper to u ${message}`);
     });
   }
 

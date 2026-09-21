@@ -38,6 +38,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   embedded = false,
 }) => {
   const { theme, isDark, isColourUI } = useTheme();
+  const isWhiteTheme = theme === 'light';
 
   const [inputText, setInputText] = useState('');
   const [filter, setFilter] = useState<'all' | 'chat' | 'system'>('all');
@@ -284,6 +285,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
               hour: '2-digit',
               minute: '2-digit',
               second: '2-digit',
+              hour12: true,
             });
 
             let displaySender = msg.sender;
@@ -319,6 +321,8 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                 const nameRegex = new RegExp(`^([<\\[\\(]?${escaped}[>\\]\\)]?\\s*[:>\\-]?\\s*)+`, 'i');
                 displayText = displayText.replace(nameRegex, '').trim();
               }
+
+              displayText = displayText.replace(/^\[bot\]\s*/i, '');
 
               if (!displayText.trim() && prevText) {
                 displayText = prevText;
@@ -365,6 +369,17 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                   [{timeStr}]
                 </span>
 
+                {/* [Bot] Tag after timestamp */}
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 select-none tracking-wider font-mono ${
+                  theme === 'classic-green'
+                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                    : isWhiteTheme
+                    ? 'bg-black text-white border border-black font-extrabold'
+                    : 'bg-zinc-800/90 text-zinc-200 border border-zinc-700'
+                }`}>
+                  [Bot]
+                </span>
+
                 {/* Sender badge strictly for bot chat or player chat */}
                 {isBotSelf ? (
                   <span className={`font-bold shrink-0 flex items-center gap-1.5 font-mono whitespace-nowrap ${
@@ -374,7 +389,13 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                     {msg.isAuto && (
                       <span
                         id="chat-console-auto-badge"
-                        className="text-[10px] uppercase font-bold tracking-wide px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 dark:text-amber-300 border border-amber-500/40 select-none"
+                        className={`text-[10px] uppercase font-extrabold tracking-wide px-1.5 py-0.5 rounded border select-none ${
+                          isColourUI
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : isDark
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : 'bg-black text-white border-black font-extrabold'
+                        }`}
                       >
                         [Auto]
                       </span>

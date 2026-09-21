@@ -64,41 +64,41 @@ export const BotHud: React.FC<BotHudProps> = ({
         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
         : isDark
         ? 'bg-zinc-800 text-zinc-100 border-zinc-700'
-        : 'bg-zinc-900 text-white border-zinc-900 shadow-xs',
+        : 'bg-black text-white border-black font-extrabold',
       dot: isColourUI
         ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse'
-        : isDark ? 'bg-zinc-100 animate-pulse' : 'bg-white shadow-xs',
+        : isDark ? 'bg-zinc-100 animate-pulse' : 'bg-white animate-pulse',
       label: 'CONNECTED',
     },
     starting: {
       color: isColourUI
         ? 'bg-sky-500/20 text-sky-200 border-sky-400/60 shadow-[0_0_15px_rgba(14,165,233,0.25)]'
-        : 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-      dot: 'bg-sky-400 animate-spin',
+        : isDark ? 'bg-sky-500/15 text-sky-300 border-sky-500/30' : 'bg-black text-white border-black font-extrabold',
+      dot: 'bg-white animate-spin',
       label: 'CONNECTING...',
     },
     reconnecting: {
       color: isColourUI
         ? 'bg-amber-500/20 text-amber-200 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
-        : 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-      dot: 'bg-amber-400 animate-pulse',
+        : isDark ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-zinc-800 text-white border-zinc-800 font-extrabold',
+      dot: 'bg-white animate-pulse',
       label: bot.nextReconnectIn ? `REJOINING IN ${bot.nextReconnectIn}s` : 'RECONNECTING',
     },
     stopped: {
       color: isColourUI
         ? 'bg-zinc-800/80 text-zinc-300 border-zinc-700'
-        : isDark ? 'bg-zinc-900 text-zinc-400 border-zinc-800' : 'bg-zinc-100 text-zinc-500 border-zinc-200',
+        : isDark ? 'bg-zinc-900 text-zinc-400 border-zinc-800' : 'bg-zinc-100 text-zinc-700 border-zinc-300 font-bold',
       dot: 'bg-zinc-500',
       label: 'STOPPED',
     },
     kicked: {
-      color: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
-      dot: 'bg-orange-400 animate-ping',
+      color: isDark ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-black text-white border-black font-extrabold',
+      dot: 'bg-white animate-ping',
       label: 'KICKED',
     },
     error: {
-      color: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-      dot: 'bg-rose-400',
+      color: isDark ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'bg-black text-white border-black font-extrabold',
+      dot: 'bg-white',
       label: 'ERROR',
     },
   };
@@ -333,11 +333,11 @@ export const BotHud: React.FC<BotHudProps> = ({
               <Clock className={`w-3.5 h-3.5 shrink-0 ${isColourUI ? 'text-sky-400' : 'text-zinc-400'}`} />
               <span className="truncate text-[11px] sm:text-xs">Uptime</span>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 leading-tight ${
+            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border shrink-0 leading-tight ${
               bot.status === 'online'
                 ? isColourUI
                   ? 'bg-sky-500/20 text-sky-200 border-sky-400/60 shadow-[0_0_8px_rgba(14,165,233,0.25)]'
-                  : isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-700' : 'bg-zinc-900 text-white border-zinc-900 shadow-xs'
+                  : isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-700' : 'bg-black text-white border-black'
                 : isColourUI
                 ? 'bg-slate-800/80 text-slate-400 border-slate-700'
                 : isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-zinc-200 text-zinc-600 border-zinc-300'
@@ -369,11 +369,11 @@ export const BotHud: React.FC<BotHudProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleAutoReconnect(bot.id, !bot.config.autoReconnect)}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 leading-tight transition-all cursor-pointer ${
+                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border shrink-0 leading-tight transition-all cursor-pointer ${
                   bot.config.autoReconnect
                     ? isColourUI
                       ? 'bg-purple-500/20 text-purple-200 border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.25)] hover:bg-purple-500/30'
-                      : isDark ? 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:text-white' : 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800'
+                      : isDark ? 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:text-white' : 'bg-black text-white border-black hover:bg-zinc-800'
                     : isColourUI
                     ? 'text-slate-400 bg-slate-800/80 border-slate-700 hover:text-slate-200'
                     : isDark ? 'text-zinc-500 bg-zinc-900 border-zinc-800 hover:text-zinc-300' : 'text-zinc-500 bg-zinc-200 border-zinc-300 hover:text-zinc-700'
@@ -383,10 +383,10 @@ export const BotHud: React.FC<BotHudProps> = ({
                 {bot.config.autoReconnect ? '24/7 ON' : 'PAUSED'}
               </button>
             ) : bot.config.autoReconnect ? (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 leading-tight transition-all duration-300 ${
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border shrink-0 leading-tight transition-all duration-300 ${
                 isColourUI
                   ? 'bg-purple-500/20 text-purple-200 border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
-                  : isDark ? 'bg-zinc-800 text-zinc-200 border-zinc-700' : 'bg-zinc-900 text-white border-zinc-900'
+                  : isDark ? 'bg-zinc-800 text-zinc-200 border-zinc-700' : 'bg-black text-white border-black'
               }`}>
                 24/7 ON
               </span>
@@ -417,17 +417,17 @@ export const BotHud: React.FC<BotHudProps> = ({
             <div className={`flex items-center gap-1.5 min-w-0 truncate ${
               isColourUI ? 'text-amber-300 font-semibold' : isDark ? 'text-zinc-400' : 'text-zinc-600'
             }`}>
-              <Zap className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+              <Zap className={`w-3.5 h-3.5 shrink-0 ${isColourUI ? 'text-amber-400' : isDark ? 'text-white' : 'text-black'}`} />
               <span className="truncate text-[11px] sm:text-xs">Anti-AFK</span>
             </div>
             <button
               type="button"
               onClick={() => onToggleAntiAfk(bot.id, !bot.config.antiAfk.enabled)}
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 leading-tight cursor-pointer transition-all ${
+              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border shrink-0 leading-tight cursor-pointer transition-all ${
                 bot.config.antiAfk.enabled
                   ? isColourUI
                     ? 'bg-amber-500/20 text-amber-200 border-amber-400/60 shadow-[0_0_8px_rgba(245,158,11,0.25)] hover:bg-amber-500/30'
-                    : isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-700 hover:text-white hover:bg-zinc-700' : 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800'
+                    : isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-700 hover:text-white hover:bg-zinc-700' : 'bg-black text-white border-black hover:bg-zinc-800'
                   : isColourUI
                   ? 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-300 hover:border-slate-600'
                   : isDark ? 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-400' : 'bg-zinc-200 text-zinc-600 border-zinc-300 hover:text-zinc-800'

@@ -934,7 +934,7 @@ export const BotDefaultsModal: React.FC<BotDefaultsModalProps> = ({
                         isColourUI ? 'text-amber-300' : isDark ? 'text-zinc-200' : 'text-zinc-800'
                       }`}
                     >
-                      <Zap className={`w-4 h-4 ${isColourUI ? 'text-amber-400' : 'text-amber-400'}`} />
+                      <Zap className={`w-4 h-4 ${isColourUI ? 'text-amber-400' : isDark ? 'text-amber-400' : 'text-black'}`} />
                       Default Anti-AFK Routine
                     </h4>
                     <label className="relative inline-flex items-center cursor-pointer">
